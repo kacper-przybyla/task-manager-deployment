@@ -1,0 +1,61 @@
+---
+- name: Set up task-manager-app on production server from scratch
+  hosts: app_servers
+  become: true
+  vars_files:
+    - vault/secrets.yml
+  tasks:
+    - name: Ensure that application directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0755"
+
+    - name: Install Docker, Docker Compose and pip
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+          - python3-pip
+        state: present
+        update_cache: true
+
+    - name: Install Python Docker SDK
+      ansible.builtin.pip:
+        name:
+          - docker
+        state: present
+        extra_args: "--break-system-packages"
+
+    - name: Copy init scripts for database
+      ansible.builtin.copy:
+        src: database/init
+        dest: "{{ app_dir }}/database"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0755"
+
+    - name: Render docker compose file
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0644"
+
+    - name: Deploy the application
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        state: present
+        pull: always
+
+    - name: Verify that application is up
+      ansible.builtin.uri:
+        url: http://localhost/api/health
+        status_code: 200
+      retries: 5
+      delay: 10
+      register: health_check
+      until: health_check.status == 200

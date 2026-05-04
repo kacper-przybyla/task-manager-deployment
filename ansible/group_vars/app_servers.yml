@@ -1,0 +1,15 @@
+ansible_python_interpreter: /usr/bin/python3
+
+app_dir: /opt/taskmanager
+app_user: ubuntu
+app_group: ubuntu
+
+app_version: latest
+
+postgres_db: taskdb_prod
+postgres_user: "{{ vault_postgres_user }}"
+postgres_password: "{{ vault_postgres_password }}"
+database_url: "{{ vault_database_url }}"
+env: production
+
+ghcr_base: ghcr.io/kacper-przybyla
