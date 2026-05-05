@@ -64,6 +64,11 @@ resource "aws_iam_role_policy_attachment" "s3" {
   policy_arn = aws_iam_policy.s3_state.arn
 }
 
+resource "aws_iam_role_policy_attachment" "iam_read" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+}
+
 output "github_actions_role_arn" {
   value = aws_iam_role.github_actions.arn
 }
