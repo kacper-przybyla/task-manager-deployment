@@ -1,0 +1,82 @@
+name: CD pipeline
+
+on:
+  repository_dispatch:
+    types: [deploy]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Image SHA to deploy'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check the repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::910685835529:role/github-actions-task-manager
+          aws-region: eu-central-1
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Get EC2 IP
+        id: tf-output
+        run: echo "ip=$(terraform output -raw web_public_ip)" >> $GITHUB_OUTPUT
+        working-directory: ./terraform
+      
+      - name: Write SSH key and set permissions
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Add EC2 to known hosts
+        run: ssh-keyscan -H ${{ steps.tf-output.outputs.ip }} >> ~/.ssh/known_hosts
+
+      - name: Install needed dependencies
+        run: |
+          pip install ansible boto3 botocore
+          ansible-galaxy collection install amazon.aws community.docker
+
+      - name: Write vault password
+        run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
+
+      - name: Run Ansible playbook after automatic start
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          APP_VERSION="${{ github.event.client_payload.sha || inputs.sha }}"
+          ansible-playbook deploy.yml \
+            --vault-password-file /tmp/vault_pass \
+            -e "app_version=$APP_VERSION"
+
+      - name: Remove vault password
+        if: always()
+        run: rm -f /tmp/vault_pass
+      
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
