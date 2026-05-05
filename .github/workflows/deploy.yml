@@ -68,7 +68,6 @@ jobs:
         run: echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
 
       - name: Run Ansible playbook after automatic start
-        if: github.event_name == 'repository_dispatch'
         run: |
           APP_VERSION="${{ github.event.client_payload.sha || inputs.sha }}"
           ansible-playbook deploy.yml \
