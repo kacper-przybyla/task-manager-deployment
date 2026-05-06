@@ -73,6 +73,7 @@ jobs:
           ansible-playbook deploy.yml \
             --vault-password-file /tmp/vault_pass \
             -e "app_version=$APP_VERSION"
+        working-directory: ./ansible
 
       - name: Remove vault password
         if: always()
