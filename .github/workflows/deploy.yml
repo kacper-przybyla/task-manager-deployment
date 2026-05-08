@@ -57,7 +57,15 @@ jobs:
         working-directory: ./terraform
 
       - name: Add EC2 to known hosts
-        run: ssh-keyscan -H ${{ steps.tf-output.outputs.ip }} >> ~/.ssh/known_hosts
+        run: |
+          for i in {1..10}; do
+            if ssh-keyscan -H ${{ steps.tf-output.outputs.ip }} >> ~/.ssh/known_hosts 2>/dev/null; then
+              echo "SSH ready"
+              break
+            fi
+            echo "Waiting for SSH... attempt $i"
+            sleep 10
+          done
 
       - name: Install needed dependencies
         run: |
