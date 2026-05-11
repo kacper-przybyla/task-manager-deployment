@@ -1,0 +1,7 @@
+repo_name: task-manager-deployment
+github_username: kacper-przybyla
+workflow_file: deploy.yml
+git_branch: main
+ssh_user: ubuntu
+container_name: task-backend
+history_file_path: ~/deploy_history.json

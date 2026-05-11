@@ -33,7 +33,6 @@ services:
     restart: unless-stopped
 
   backend:
-    # TODO: Pin to specific SHA when CD pipeline is implemented
     image: {{ ghcr_base }}/task-manager-backend:{{ app_version | default('latest') }}
     container_name: task-backend
     environment:
