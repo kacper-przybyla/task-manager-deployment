@@ -188,7 +188,7 @@ def cmd_deploy(version, config, deploy_history):
         if conclusion == "success":
             health_dict = check_app_health(config)
             deploy_history[-1]["app_healthy"] = health_dict is not None
-            if health_dict["status"] == "healthy":
+            if health_dict:
                 print("The app is healthy")
             else:
                 print("The app isn't healthy. The rollback is needed.")
