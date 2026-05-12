@@ -24,6 +24,7 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
+
 def load_history(config):
     """Load deployment history from JSON file. Returns empty list if file does not exist."""
     if os.path.exists(config["history_file_path"]):
@@ -35,6 +36,7 @@ def load_history(config):
             json.dump([], f, indent=2)
         return []
 
+
 def save_history(deploy_history, config):
     """Write current deployment history to JSON file."""
     path = config["history_file_path"]
@@ -42,6 +44,7 @@ def save_history(deploy_history, config):
     with open(tmp, "w") as f:
         json.dump(deploy_history, f, indent=2)
     os.replace(tmp, path)
+
 
 def get_ec2_ip():
     """Retrieve EC2 public IP from Terraform output."""
@@ -51,6 +54,7 @@ def get_ec2_ip():
     for output in outputs:
         if output.startswith("web_public_ip"):
             return output.split(" ")[2].strip().replace('"', "")
+
 
 def load_config():
     """Load configuration from .env and config.yml. Returns unified config dict."""
@@ -73,6 +77,7 @@ def load_config():
                 config[key] = value
 
     return config
+
 
 def filter_releases(tags):
     return [t for t in tags if len(t.split(".")) == 3]
@@ -122,11 +127,13 @@ def ssh_run(command, config):
     else:
         raise RuntimeError(result.stderr)
 
+
 def cmd_current_version(config):
     """Return the image tag currently running on EC2."""
     output = ssh_run(f"docker inspect {config['container_name']}", config)
     data = json.loads(output)
     return data[0]["Config"]["Image"].split(":")[-1]
+
 
 def check_app_health(config, attempts=10, interval=3):
     """Check the app health via GET on /api/health endpoint"""
@@ -201,6 +208,7 @@ def cmd_deploy(version, config, deploy_history):
         print("Wrong version given")
         exit(1)
 
+
 def watch_deploy(workflow_run_response, config, max_wait=900):
     """Poll GitHub Actions run until completion. Displays spinner. Returns (status, conclusion)."""
     frames = ["|", "/", "-", "\\"]
@@ -239,6 +247,7 @@ def status(config):
     print(f"Production version: v{cmd_current_version(config)}")
     cmd_list_versions(config)
 
+
 def cmd_rollback(config, deploy_history):
     """Deploy the last successful version that differs from current production."""
     successfull_entries = [x for x in deploy_history if x["success"] == True and x["app_healthy"] == True]
@@ -251,6 +260,7 @@ def cmd_rollback(config, deploy_history):
     else:
         print("Already on last working version")
         exit(1)
+
 
 def main():
     """Entry point. Parses arguments, loads config and history, routes to command."""
@@ -268,5 +278,6 @@ def main():
         status(config)
     elif args.command == "rollback":
         cmd_rollback(config, deploy_history)
+
 
 main()
